@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">tauri-budgeting-app</string>
+    <string name="main_activity_title">tauri-budgeting-app</string>
+</resources>

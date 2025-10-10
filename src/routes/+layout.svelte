@@ -26,7 +26,6 @@
   import { Bars3 } from "@steeze-ui/heroicons";
   import { Icon } from "@steeze-ui/svelte-icon";
   import { budget_store } from "../store/budget-store";
-  import { trySendNotification } from "@/notifications";
 </script>
 
 <Sheet.Root bind:open={isOpen}>

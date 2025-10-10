@@ -152,11 +152,11 @@ export const budget_store = {
 export function generateForecast(time_range: Interval<true>) {
   const snapshot = get();
   // sorted by date in descending order
-  let sorted_balance = snapshot.account_balance_history
-    .toSorted((a, b) => a.date.localeCompare(b.date))
-    .toReversed();
+  let sorted_balance = snapshot.account_balance_history.toSorted((a, b) =>
+    b.date.localeCompare(a.date)
+  );
 
-  // find the last balance before the start of the forecast, or 0
+  // find the oldest balance before the start of the forecast, or 0
   const first_balance = sorted_balance.find(
     (val) => DateTime.fromISO(val.date).startOf("day") <= time_range.start
   );

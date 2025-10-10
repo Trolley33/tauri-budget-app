@@ -51,15 +51,6 @@
       >
         Clear all data
       </Button>
-      <Button
-        variant={"destructive"}
-        onclick={() => {
-          isOpen = false;
-          budget_store.clearAll();
-        }}
-      >
-        Clear all data
-      </Button>
     </div>
   </Sheet.Content>
   <main class="w-screen h-screen max-h-screen flex flex-col">

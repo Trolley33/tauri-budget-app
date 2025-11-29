@@ -1,12 +1,11 @@
 import { load, Store } from "@tauri-apps/plugin-store";
 import { DateTime, Interval } from "luxon";
 import { writable } from "svelte/store";
-import { v4 } from "uuid";
 
 let store: Store;
 load("budget-store.json").then((s) => {
   store = s;
-  store.get<BudgetInfo>("budget_info").then((info) => {
+  store.get<BudgetInfo>("budgetInfo").then((info) => {
     if (info) {
       set(info);
     }
@@ -36,27 +35,27 @@ export type Expense = {
 export type Income = {
   id: string;
   name: string;
-  total_in: number;
-  total_retained: number;
+  totalIn: number;
+  totalRetained: number;
   dayOfMonth: number;
 };
 
 type BudgetInfo = {
-  recurring_expenses: Expense[];
-  account_balance_history: {
+  recurringExpenses: Expense[];
+  accountBalanceHistory: {
     date: string; // iso
     balance: number;
   }[];
   incomes: Income[];
 };
 
-const DEFAULT_BUDGET_INFO: BudgetInfo = {
-  recurring_expenses: [],
-  account_balance_history: [],
+const DEFAULTBUDGETINFO: BudgetInfo = {
+  recurringExpenses: [],
+  accountBalanceHistory: [],
   incomes: [],
 };
 
-const { set, subscribe, update } = writable(DEFAULT_BUDGET_INFO);
+const { set, subscribe, update } = writable(DEFAULTBUDGETINFO);
 
 const get = () => {
   let val: BudgetInfo;
@@ -64,43 +63,43 @@ const get = () => {
   return val!;
 };
 
-const update_budget = (fn: (info: BudgetInfo) => BudgetInfo) => {
+const updateBudget = (fn: (info: BudgetInfo) => BudgetInfo) => {
   update((info) => {
-    const new_info = fn(info);
-    store.set("budget_info", new_info);
-    return new_info;
+    const newInfo = fn(info);
+    store.set("budgetInfo", newInfo);
+    return newInfo;
   });
 };
 
-export const budget_store = {
+export const budgetStore = {
   subscribe,
   addOrUpdateExpense: (expense: Expense) =>
-    update_budget((info) => {
-      const existing = info.recurring_expenses.find((e) => e.id === expense.id);
+    updateBudget((info) => {
+      const existing = info.recurringExpenses.find((e) => e.id === expense.id);
       if (existing) {
         existing.amount = expense.amount;
         existing.label = expense.label;
         existing.recurring = expense.recurring;
       } else {
-        info.recurring_expenses.push(expense);
+        info.recurringExpenses.push(expense);
       }
       return info;
     }),
   removeExpense: (id: string) =>
-    update_budget((info) => {
-      info.recurring_expenses = info.recurring_expenses.filter(
+    updateBudget((info) => {
+      info.recurringExpenses = info.recurringExpenses.filter(
         (e) => e.id !== id
       );
       return info;
     }),
 
   addOrUpdateIncome: (income: Income) =>
-    update_budget((info) => {
+    updateBudget((info) => {
       const existing = info.incomes.find((e) => e.id === income.id);
       if (existing) {
         existing.name = income.name;
-        existing.total_in = income.total_in;
-        existing.total_retained = income.total_retained;
+        existing.totalIn = income.totalIn;
+        existing.totalRetained = income.totalRetained;
         existing.dayOfMonth = income.dayOfMonth;
       } else {
         info.incomes.push(income);
@@ -108,39 +107,39 @@ export const budget_store = {
       return info;
     }),
   removeIncome: (id: string) =>
-    update_budget((info) => {
+    updateBudget((info) => {
       info.incomes = info.incomes.filter((e) => e.id !== id);
       return info;
     }),
   clearAll: () => {
-    update_budget(() => DEFAULT_BUDGET_INFO);
+    updateBudget(() => DEFAULTBUDGETINFO);
   },
 
   setManualBalance(date: DateTime, balance: number | null) {
     if (date.isValid) {
-      update_budget((info) => {
-        const date_str = date.toISODate()!;
-        const existing = info.account_balance_history.find(
-          (b) => b.date === date_str
+      updateBudget((info) => {
+        const dateStr = date.toISODate()!;
+        const existing = info.accountBalanceHistory.find(
+          (b) => b.date === dateStr
         );
         if (existing) {
           if (balance === null) {
-            info.account_balance_history = info.account_balance_history.filter(
-              (b) => b.date !== date_str
+            info.accountBalanceHistory = info.accountBalanceHistory.filter(
+              (b) => b.date !== dateStr
             );
           } else {
             existing.balance = balance;
           }
         } else {
           if (balance !== null) {
-            info.account_balance_history.push({
-              date: date_str,
+            info.accountBalanceHistory.push({
+              date: dateStr,
               balance,
             });
           }
         }
 
-        info.account_balance_history = info.account_balance_history
+        info.accountBalanceHistory = info.accountBalanceHistory
           .sort((a, b) => b.date.localeCompare(a.date))
           .slice(0, 10);
         return info;
@@ -149,85 +148,82 @@ export const budget_store = {
   },
 };
 
-export function generateForecast(time_range: Interval<true>) {
+export function generateForecast(timeRange: Interval<true>) {
   const snapshot = get();
   // sorted by date in descending order
-  let sorted_balance = snapshot.account_balance_history.toSorted((a, b) =>
+  let sortedBalance = snapshot.accountBalanceHistory.toSorted((a, b) =>
     b.date.localeCompare(a.date)
   );
 
   // find the oldest balance before the start of the forecast, or 0
-  const first_balance = sorted_balance.find(
-    (val) => DateTime.fromISO(val.date).startOf("day") <= time_range.start
+  const firstBalance = sortedBalance.find(
+    (val) => DateTime.fromISO(val.date).startOf("day") <= timeRange.start
   );
 
-  let balance = first_balance?.balance || 0;
+  let balance = firstBalance?.balance || 0;
 
   const balances: {
     date: DateTime;
-    starting_balance: number;
-    closing_balance: number;
+    startingBalance: number;
+    closingBalance: number;
     expenses: ReturnType<typeof getExpenses>;
     incomes: ReturnType<typeof getIncomes>;
-    total_expense_cost: number;
+    totalExpenseCost: number;
     type: "manual" | "forecast";
     isPayday: boolean;
   }[] = [];
 
-  const days = time_range
+  const days = timeRange
     .set({
-      start: (first_balance?.date
-        ? DateTime.fromISO(first_balance.date)
-        : time_range.start
+      start: (firstBalance?.date
+        ? DateTime.fromISO(firstBalance.date)
+        : timeRange.start
       ).startOf("day"),
-      end: time_range.end?.endOf("day"),
+      end: timeRange.end?.endOf("day"),
     })
     .splitBy({ day: 1 })
     .map((d) => d.start!);
 
-  const expenses = getExpenses(snapshot.recurring_expenses, days);
+  const expenses = getExpenses(snapshot.recurringExpenses, days);
   const incomes = getIncomes(snapshot.incomes, days);
 
   for (const day of days) {
-    const starting_balance = balance;
+    const startingBalance = balance;
 
-    const total_expenses = expenses.filter((e) => e.date.equals(day));
-    const total_incomes = incomes.filter((i) => i.date.equals(day));
-    const isPayday = total_incomes.length > 0;
+    const totalExpenses = expenses.filter((e) => e.date.equals(day));
+    const totalIncomes = incomes.filter((i) => i.date.equals(day));
+    const isPayday = totalIncomes.length > 0;
 
-    const total_expense_cost =
-      total_expenses.reduce((acc, e) => acc + e.amount, 0) +
-      total_incomes.reduce(
-        (acc, i) => acc - (i.total_in - i.total_retained),
-        0
-      );
+    const totalExpenseCost =
+      totalExpenses.reduce((acc, e) => acc + e.amount, 0) +
+      totalIncomes.reduce((acc, i) => acc - (i.totalIn - i.totalRetained), 0);
 
-    let manual_balance = sorted_balance.find((b) => b.date === day.toISODate());
-    if (manual_balance) {
-      balance = manual_balance.balance;
-      if (day >= time_range.start) {
+    let manualBalance = sortedBalance.find((b) => b.date === day.toISODate());
+    if (manualBalance) {
+      balance = manualBalance.balance;
+      if (day >= timeRange.start) {
         balances.push({
           date: day,
-          starting_balance,
-          closing_balance: manual_balance.balance,
-          expenses: total_expenses,
-          incomes: total_incomes,
-          total_expense_cost: total_expense_cost,
+          startingBalance,
+          closingBalance: manualBalance.balance,
+          expenses: totalExpenses,
+          incomes: totalIncomes,
+          totalExpenseCost: totalExpenseCost,
           type: "manual",
           isPayday,
         });
       }
     } else {
-      balance -= total_expense_cost;
+      balance -= totalExpenseCost;
       // Don't bother storing balances outside the selected range, even though we did calculate them
-      if (day >= time_range.start) {
+      if (day >= timeRange.start) {
         balances.push({
           date: day,
-          starting_balance,
-          closing_balance: balance,
-          expenses: total_expenses,
-          incomes: total_incomes,
-          total_expense_cost,
+          startingBalance,
+          closingBalance: balance,
+          expenses: totalExpenses,
+          incomes: totalIncomes,
+          totalExpenseCost,
           type: "forecast",
           isPayday,
         });
@@ -239,7 +235,7 @@ export function generateForecast(time_range: Interval<true>) {
 }
 
 function getExpenses(expenses: Expense[], dates: DateTime<true>[]) {
-  let expenses_in_scope: {
+  let expensesInScope: {
     label: string;
     amount: number;
     date: DateTime;
@@ -248,7 +244,7 @@ function getExpenses(expenses: Expense[], dates: DateTime<true>[]) {
     for (const expense of expenses) {
       if (expense.recurring.type === "monthly") {
         if (day.day === expense.recurring.dayOfMonth) {
-          expenses_in_scope.push({
+          expensesInScope.push({
             label: expense.label,
             amount: expense.amount,
             date: day,
@@ -256,7 +252,7 @@ function getExpenses(expenses: Expense[], dates: DateTime<true>[]) {
         }
       } else if (expense.recurring.type === "weekly") {
         if (day.weekday === expense.recurring.dayOfWeek) {
-          expenses_in_scope.push({
+          expensesInScope.push({
             label: expense.label,
             amount: expense.amount,
             date: day,
@@ -267,7 +263,7 @@ function getExpenses(expenses: Expense[], dates: DateTime<true>[]) {
           day.month === expense.recurring.month &&
           day.day === expense.recurring.dayOfMonth
         ) {
-          expenses_in_scope.push({
+          expensesInScope.push({
             label: expense.label,
             amount: expense.amount,
             date: day,
@@ -277,41 +273,41 @@ function getExpenses(expenses: Expense[], dates: DateTime<true>[]) {
     }
   }
 
-  return expenses_in_scope;
+  return expensesInScope;
 }
 
 function getIncomes(incomes: Income[], dates: DateTime<true>[]) {
   if (!incomes) return [];
-  let incomes_in_scope: {
+  let incomesInScope: {
     name: string;
-    total_in: number;
-    total_retained: number;
+    totalIn: number;
+    totalRetained: number;
     date: DateTime;
   }[] = [];
   for (const day of dates) {
     for (const income of incomes) {
-      let target_day =
+      let targetDay =
         day.daysInMonth >= income.dayOfMonth
           ? income.dayOfMonth
           : day.daysInMonth;
       // iterate backwards to find the last day of the month that is not a weekend
-      let target_date = day.set({ day: target_day });
+      let targetDate = day.set({ day: targetDay });
       while (
-        (target_date.weekday === 6 || target_date.weekday === 7) &&
-        target_date.hasSame(day, "month")
+        (targetDate.weekday === 6 || targetDate.weekday === 7) &&
+        targetDate.hasSame(day, "month")
       ) {
-        target_date = target_date.minus({ days: 1 });
+        targetDate = targetDate.minus({ days: 1 });
       }
-      if (day.hasSame(target_date, "day")) {
-        incomes_in_scope.push({
+      if (day.hasSame(targetDate, "day")) {
+        incomesInScope.push({
           name: income.name,
-          total_in: income.total_in,
-          total_retained: income.total_retained,
+          totalIn: income.totalIn,
+          totalRetained: income.totalRetained,
           date: day,
         });
       }
     }
   }
 
-  return incomes_in_scope;
+  return incomesInScope;
 }

@@ -1,31 +1,19 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { title_store } from "../../store/title";
   import * as Card from "$lib/components/ui/card";
   import * as Dialog from "$lib/components/ui/dialog";
-  import { Badge } from "$lib/components/ui/badge";
-  import {
-    budget_store,
-    type Expense,
-    type Income,
-  } from "../../store/budget-store";
-  import {
-    format_currency,
-    format_ordinal,
-    get_month_name,
-    get_weekday_name,
-  } from "@/utils";
-  import type { WeekdayNumbers } from "luxon";
-  import Button from "@/components/ui/button/button.svelte";
-  import { Icon } from "@steeze-ui/svelte-icon";
-  import { Plus } from "@steeze-ui/heroicons";
-  import { v4 } from "uuid";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
-  import Select from "@/components/ui/input/select.svelte";
+  import Button from "@/components/ui/button/button.svelte";
+  import { formatCurrency, formatOrdinal } from "@/utils";
+  import { Plus } from "@steeze-ui/heroicons";
+  import { Icon } from "@steeze-ui/svelte-icon";
+  import { onMount } from "svelte";
+  import { v4 } from "uuid";
+  import { budgetStore, type Income } from "../../store/budget-store";
+  import { titleStore } from "../../store/title";
 
   onMount(() => {
-    $title_store = `Income`;
+    $titleStore = `Income`;
   });
 
   let isOpen = $state(false);
@@ -35,14 +23,14 @@
 
   $effect(() => {
     if (selectedIncomeId !== null) {
-      draftIncome = $budget_store.incomes.find(
+      draftIncome = $budgetStore.incomes.find(
         (income) => income.id === selectedIncomeId
       ) || {
         id: selectedIncomeId,
         name: "",
         dayOfMonth: 31,
-        total_in: 0,
-        total_retained: 0,
+        totalIn: 0,
+        totalRetained: 0,
       };
     }
   });
@@ -51,7 +39,7 @@
 <div
   class="w-full flex-grow overflow-y-auto pt-4 pb-32 px-4 flex flex-col gap-4 bg-slate-200"
 >
-  {#each $budget_store.incomes as income (income.id)}
+  {#each $budgetStore.incomes as income (income.id)}
     <Card.Root
       onclick={() => {
         selectedIncomeId = income.id;
@@ -64,22 +52,21 @@
       <Card.Content class="grid grid-cols-2 gap-x-2 gap-y-5">
         <div class="flex flex-col gap-0.5">
           <span class="text-sm font-semibold leading-none">Total Income</span>
-          <span>{format_currency(income.total_in)}</span>
+          <span>{formatCurrency(income.totalIn)}</span>
         </div>
         <div class="flex flex-col gap-0.5">
           <span class="text-sm font-semibold leading-none">Total Kept</span>
-          <span>{format_currency(income.total_retained)}</span>
+          <span>{formatCurrency(income.totalRetained)}</span>
         </div>
         <div class="flex flex-col gap-0.5">
           <span class="text-sm font-semibold leading-none">Total Profit</span>
-          <span>{format_currency(income.total_in - income.total_retained)}</span
-          >
+          <span>{formatCurrency(income.totalIn - income.totalRetained)}</span>
         </div>
         <div class="flex flex-col gap-0.5">
           <span class="text-sm font-semibold leading-none"
             >Day of the month</span
           >
-          <span>{format_ordinal(income.dayOfMonth)}</span>
+          <span>{formatOrdinal(income.dayOfMonth)}</span>
         </div>
       </Card.Content>
     </Card.Root>
@@ -110,14 +97,14 @@
           </div>
           <div class="flex w-full max-w-sm flex-col gap-1.5">
             <Label>Total In</Label>
-            <Input required type="number" bind:value={draftIncome.total_in} />
+            <Input required type="number" bind:value={draftIncome.totalIn} />
           </div>
           <div class="flex w-full max-w-sm flex-col gap-1.5">
             <Label>Total Retained</Label>
             <Input
               required
               type="number"
-              bind:value={draftIncome.total_retained}
+              bind:value={draftIncome.totalRetained}
             />
           </div>
           <div class="flex w-full max-w-sm flex-col gap-1.5">
@@ -136,14 +123,14 @@
             type="button"
             variant="destructive"
             onclick={() => {
-              budget_store.removeIncome(selectedIncomeId!);
+              budgetStore.removeIncome(selectedIncomeId!);
               isOpen = false;
             }}>Delete income</Button
           >
           <Button
             type="submit"
             onclick={() => {
-              budget_store.addOrUpdateIncome(draftIncome!);
+              budgetStore.addOrUpdateIncome(draftIncome!);
               isOpen = false;
             }}>Save changes</Button
           >

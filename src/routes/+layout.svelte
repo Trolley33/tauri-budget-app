@@ -9,12 +9,12 @@
 
 <script lang="ts">
   import { page } from "$app/stores";
-  import { title_store } from "../store/title";
+  import { titleStore } from "../store/title";
   import { Button } from "$lib/components/ui/button";
   import * as Sheet from "$lib/components/ui/sheet";
   import "../app.css";
 
-  let nav_items = [
+  let navItems = [
     { label: "Forecasting", href: "/" },
     { label: "Expenses", href: "/expenses" },
     { label: "Income", href: "/income" },
@@ -25,13 +25,13 @@
 
   import { Bars3 } from "@steeze-ui/heroicons";
   import { Icon } from "@steeze-ui/svelte-icon";
-  import { budget_store } from "../store/budget-store";
+  import { budgetStore } from "../store/budget-store";
 </script>
 
 <Sheet.Root bind:open={isOpen}>
   <Sheet.Content side="left">
     <div class="flex flex-col pt-8 gap-2 h-full">
-      {#each nav_items as item}
+      {#each navItems as item}
         <Button
           variant={$page.url.pathname === item.href ? "default" : "outline"}
           href={item.href}
@@ -45,7 +45,7 @@
         variant={"destructive"}
         onclick={() => {
           isOpen = false;
-          budget_store.clearAll();
+          budgetStore.clearAll();
         }}
       >
         Clear all data
@@ -58,7 +58,7 @@
         <Icon src={Bars3} class="w-6 h-6" theme="solid" />
       </Sheet.Trigger>
       <h1 class="flex-grow p-3 text-lg font-bold">
-        {$title_store}
+        {$titleStore}
       </h1>
     </nav>
     {@render children?.()}

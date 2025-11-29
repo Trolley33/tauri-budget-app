@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // format as GBP
-export function format_currency(amount: number) {
+export function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
@@ -16,17 +16,17 @@ export function format_currency(amount: number) {
 }
 
 // format number as 1st, 2nd, 3rd, etc.
-export function format_ordinal(num: number): string {
+export function formatOrdinal(num: number): string {
   const suffixes = ["th", "st", "nd", "rd"];
   const value = num % 100;
   return num + (suffixes[(value - 20) % 10] || suffixes[value] || suffixes[0]);
 }
 
 // use luxon to get month name from month number
-export function get_month_name(month: number): string {
+export function getMonthName(month: number): string {
   return DateTime.fromObject({ month }).toFormat("LLLL");
 }
 
-export function get_weekday_name(weekday: WeekdayNumbers): string {
+export function getWeekdayName(weekday: WeekdayNumbers): string {
   return DateTime.local().set({ weekday }).toFormat("cccc");
 }

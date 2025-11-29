@@ -1,27 +1,27 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { title_store } from "../../store/title";
+  import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
   import * as Dialog from "$lib/components/ui/dialog";
-  import { Badge } from "$lib/components/ui/badge";
-  import { budget_store, type Expense } from "../../store/budget-store";
-  import {
-    format_currency,
-    format_ordinal,
-    get_month_name,
-    get_weekday_name,
-  } from "@/utils";
-  import type { WeekdayNumbers } from "luxon";
-  import Button from "@/components/ui/button/button.svelte";
-  import { Icon } from "@steeze-ui/svelte-icon";
-  import { Plus } from "@steeze-ui/heroicons";
-  import { v4 } from "uuid";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
+  import Button from "@/components/ui/button/button.svelte";
   import Select from "@/components/ui/input/select.svelte";
+  import {
+    formatCurrency,
+    formatOrdinal,
+    getMonthName,
+    getWeekdayName,
+  } from "@/utils";
+  import { Plus } from "@steeze-ui/heroicons";
+  import { Icon } from "@steeze-ui/svelte-icon";
+  import type { WeekdayNumbers } from "luxon";
+  import { onMount } from "svelte";
+  import { v4 } from "uuid";
+  import { budgetStore, type Expense } from "../../store/budget-store";
+  import { titleStore } from "../../store/title";
 
   onMount(() => {
-    $title_store = `Expenses`;
+    $titleStore = `Expenses`;
   });
 
   let isOpen = $state(false);
@@ -31,7 +31,7 @@
 
   $effect(() => {
     if (selectedExpenseId !== null) {
-      draftExpense = $budget_store.recurring_expenses.find(
+      draftExpense = $budgetStore.recurringExpenses.find(
         (expense) => expense.id === selectedExpenseId
       ) || {
         id: selectedExpenseId,
@@ -49,7 +49,7 @@
 <div
   class="w-full flex-grow overflow-y-auto pt-4 pb-32 px-4 flex flex-col gap-4 bg-slate-200"
 >
-  {#each $budget_store.recurring_expenses.toSorted((a, b) => {
+  {#each $budgetStore.recurringExpenses.toSorted((a, b) => {
     // first weekly, then monthly, then yearly
     if (a.recurring.type === "weekly" && b.recurring.type !== "weekly") {
       return -1;
@@ -69,7 +69,7 @@
     >
       <Card.Header class="relative">
         <Card.Title>{expense.label}</Card.Title>
-        <Card.Description>{format_currency(expense.amount)}</Card.Description>
+        <Card.Description>{formatCurrency(expense.amount)}</Card.Description>
         <Badge
           variant={expense.recurring.type === "monthly"
             ? "green"
@@ -87,16 +87,14 @@
       </Card.Header>
       <Card.Content>
         {#if expense.recurring.type === "monthly"}
-          <b>{format_ordinal(expense.recurring.dayOfMonth)}</b> of
+          <b>{formatOrdinal(expense.recurring.dayOfMonth)}</b> of
           <b>every month</b>
         {:else if expense.recurring.type === "yearly"}
-          <b>{format_ordinal(expense.recurring.dayOfMonth)}</b> of
-          <b>{get_month_name(expense.recurring.month)}</b>
+          <b>{formatOrdinal(expense.recurring.dayOfMonth)}</b> of
+          <b>{getMonthName(expense.recurring.month)}</b>
         {:else if expense.recurring.type === "weekly"}
           Every <b
-            >{get_weekday_name(
-              expense.recurring.dayOfWeek as WeekdayNumbers
-            )}</b
+            >{getWeekdayName(expense.recurring.dayOfWeek as WeekdayNumbers)}</b
           >
         {/if}
       </Card.Content>
@@ -198,14 +196,14 @@
             type="button"
             variant="destructive"
             onclick={() => {
-              budget_store.removeExpense(selectedExpenseId!);
+              budgetStore.removeExpense(selectedExpenseId!);
               isOpen = false;
             }}>Delete expense</Button
           >
           <Button
             type="submit"
             onclick={() => {
-              budget_store.addOrUpdateExpense(draftExpense!);
+              budgetStore.addOrUpdateExpense(draftExpense!);
               isOpen = false;
             }}>Save changes</Button
           >

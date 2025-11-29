@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { budget_store, generateForecast } from "../store/budget-store";
-  import { DateTime, Interval } from "luxon";
   import * as Dialog from "$lib/components/ui/dialog";
+  import { DateTime, Interval } from "luxon";
+  import { budgetStore, generateForecast } from "../store/budget-store";
 
+  import { ArrowLeft, ArrowRight } from "@steeze-ui/heroicons";
   import { Icon } from "@steeze-ui/svelte-icon";
-  import { ArrowLeft, ArrowRight, Bars3 } from "@steeze-ui/heroicons";
-  import { title_store } from "../store/title";
+  import { titleStore } from "../store/title";
 
-  let current_view: {
+  let currentView: {
     type: "month" | "week";
     anchor: DateTime;
   } = $state({
@@ -15,53 +15,53 @@
     anchor: DateTime.local(),
   });
 
-  let current_range = $derived.by(() => {
+  let currentRange = $derived.by(() => {
     let range: Interval;
-    if (current_view.type === "month") {
+    if (currentView.type === "month") {
       range = Interval.fromDateTimes(
-        current_view.anchor.startOf("month"),
-        current_view.anchor.endOf("month")
+        currentView.anchor.startOf("month"),
+        currentView.anchor.endOf("month")
       );
     } else {
       range = Interval.fromDateTimes(
-        current_view.anchor.startOf("week"),
-        current_view.anchor.plus({ week: 3 }).endOf("week")
+        currentView.anchor.startOf("week"),
+        currentView.anchor.plus({ week: 3 }).endOf("week")
       );
     }
 
     return range;
   });
 
-  let current_forecast = $derived.by(() => {
-    $budget_store;
-    return generateForecast(current_range);
+  let currentForecast = $derived.by(() => {
+    $budgetStore;
+    return generateForecast(currentRange);
   });
 
   function next() {
-    current_view.anchor = current_view.anchor.plus({
-      month: current_view.type === "month" ? 1 : 0,
-      week: current_view.type === "week" ? 1 : 0,
+    currentView.anchor = currentView.anchor.plus({
+      month: currentView.type === "month" ? 1 : 0,
+      week: currentView.type === "week" ? 1 : 0,
     });
   }
 
   function prev() {
-    current_view.anchor = current_view.anchor.minus({
-      month: current_view.type === "month" ? 1 : 0,
-      week: current_view.type === "week" ? 1 : 0,
+    currentView.anchor = currentView.anchor.minus({
+      month: currentView.type === "month" ? 1 : 0,
+      week: currentView.type === "week" ? 1 : 0,
     });
   }
 
   function swapViewType() {
-    current_view.type = current_view.type === "month" ? "week" : "month";
+    currentView.type = currentView.type === "month" ? "week" : "month";
   }
 
   $effect(() => {
-    $title_store = `Forecast - ${current_view.type === "month" ? "Monthly" : "Weekly"}`;
+    $titleStore = `Forecast - ${currentView.type === "month" ? "Monthly" : "Weekly"}`;
   });
 
-  import { Input } from "$lib/components/ui/input/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { cn, format_currency } from "@/utils";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { cn, formatCurrency } from "@/utils";
 
   let isManualBalanceDialogOpen = $state(false);
   let isExpensesDialogOpen = $state(false);
@@ -75,7 +75,7 @@
     <Icon src={ArrowLeft} class="w-6 h-6" theme="solid" />
   </button>
   <button class="flex-grow p-3" onclick={swapViewType}>
-    {current_range.toFormat("dd LLL yyyy")}
+    {currentRange.toFormat("dd LLL yyyy")}
   </button>
 
   <button type="button" class="p-3 active:bg-indigo-800" onclick={next}>
@@ -83,7 +83,7 @@
   </button>
 </nav>
 
-{#if current_forecast}
+{#if currentForecast}
   <div class="w-full flex-grow overflow-y-auto">
     <table class="w-full">
       <thead>
@@ -100,7 +100,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each current_forecast as day, idx (day.date.toISODate())}
+        {#each currentForecast as day, idx (day.date.toISODate())}
           <tr
             class:border-t-8={day.date.weekday === 1 && idx !== 0}
             class={cn(
@@ -120,10 +120,10 @@
                 ),
               })}
             >
-              {day.date.toLocaleString(DateTime.DATE_MED_WITH_WEEKDAY)}
+              {day.date.toLocaleString(DateTime.DATEMEDWITHWEEKDAY)}
             </td>
             <td class="border px-2 py-3 text-right"
-              >{format_currency(day.starting_balance)}</td
+              >{formatCurrency(day.startingBalance)}</td
             >
             <td
               class="border px-2 py-3 text-right"
@@ -131,14 +131,14 @@
               onclick={() => {
                 selectedDate = day.date;
                 if (day.type === "manual") {
-                  manualBalance = day.closing_balance;
+                  manualBalance = day.closingBalance;
                 } else {
                   manualBalance = 0;
                 }
                 isManualBalanceDialogOpen = true;
               }}
             >
-              {format_currency(day.closing_balance)}
+              {formatCurrency(day.closingBalance)}
             </td>
             <td
               class="border px-2 py-3 text-right"
@@ -147,8 +147,8 @@
                 isExpensesDialogOpen = true;
               }}
             >
-              {#if day.total_expense_cost != 0}
-                {format_currency(-1 * day.total_expense_cost)}
+              {#if day.totalExpenseCost != 0}
+                {formatCurrency(-1 * day.totalExpenseCost)}
               {/if}
             </td>
             <td
@@ -175,7 +175,7 @@
       <Dialog.Header>
         <Dialog.Title
           >Manually set balance for {selectedDate.toLocaleString(
-            DateTime.DATE_MED_WITH_WEEKDAY
+            DateTime.DATEMEDWITHWEEKDAY
           )}</Dialog.Title
         >
       </Dialog.Header>
@@ -187,7 +187,7 @@
           type="button"
           variant="destructive"
           onclick={() => {
-            budget_store.setManualBalance(selectedDate!, null);
+            budgetStore.setManualBalance(selectedDate!, null);
             isManualBalanceDialogOpen = false;
             selectedDate = null;
           }}>Clear</Button
@@ -195,7 +195,7 @@
         <Button
           type="button"
           onclick={() => {
-            budget_store.setManualBalance(selectedDate!, manualBalance);
+            budgetStore.setManualBalance(selectedDate!, manualBalance);
             isManualBalanceDialogOpen = false;
             selectedDate = null;
           }}>Save changes</Button
@@ -210,15 +210,13 @@
     {#if selectedDate !== null}
       <Dialog.Header>
         <Dialog.Title>
-          Expenses on {selectedDate.toLocaleString(
-            DateTime.DATE_MED_WITH_WEEKDAY
-          )}
+          Expenses on {selectedDate.toLocaleString(DateTime.DATEMEDWITHWEEKDAY)}
         </Dialog.Title>
         <div class="px-10 pt-5">
           <h2 class="font-semibold">Outgoing</h2>
-          {#each current_forecast.find( (f) => f.date.hasSame(selectedDate!, "day") )?.expenses || [] as expense}
+          {#each currentForecast.find( (f) => f.date.hasSame(selectedDate!, "day") )?.expenses || [] as expense}
             <li class="list-disc">
-              {expense.label}: {format_currency(-1 * expense.amount)}
+              {expense.label}: {formatCurrency(-1 * expense.amount)}
             </li>
           {:else}
             <p><i>Nothing!</i></p>
@@ -226,10 +224,10 @@
         </div>
         <div class="px-10 pt-5">
           <h2 class="font-semibold">Incoming</h2>
-          {#each current_forecast.find( (f) => f.date.hasSame(selectedDate!, "day") )?.incomes || [] as income}
+          {#each currentForecast.find( (f) => f.date.hasSame(selectedDate!, "day") )?.incomes || [] as income}
             <li class="list-disc">
-              {income.name}: {format_currency(
-                income.total_in - income.total_retained
+              {income.name}: {formatCurrency(
+                income.totalIn - income.totalRetained
               )}
             </li>
           {:else}

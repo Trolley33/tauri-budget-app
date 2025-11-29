@@ -1,155 +1,17 @@
-import { load, Store } from "@tauri-apps/plugin-store";
-import { DateTime, Interval } from "luxon";
-import { writable } from "svelte/store";
+import type {
+  BudgetInfo,
+  Expense,
+  IBudgetRepository,
+  Income,
+} from "@/budget/types";
+import { DateTime, type Interval } from "luxon";
 
-let store: Store;
-load("budget-store.json").then((s) => {
-  store = s;
-  store.get<BudgetInfo>("budgetInfo").then((info) => {
-    if (info) {
-      set(info);
-    }
-  });
-});
+export function generateForecast(
+  budgetInfo: BudgetInfo,
+  timeRange: Interval<true>
+) {
+  const snapshot = budgetInfo;
 
-export type Expense = {
-  id: string;
-  label: string;
-  amount: number;
-  recurring:
-    | {
-        type: "monthly";
-        dayOfMonth: number;
-      }
-    | {
-        type: "weekly";
-        dayOfWeek: number;
-      }
-    | {
-        type: "yearly";
-        month: number;
-        dayOfMonth: number;
-      };
-};
-
-export type Income = {
-  id: string;
-  name: string;
-  totalIn: number;
-  totalRetained: number;
-  dayOfMonth: number;
-};
-
-type BudgetInfo = {
-  recurringExpenses: Expense[];
-  accountBalanceHistory: {
-    date: string; // iso
-    balance: number;
-  }[];
-  incomes: Income[];
-};
-
-const DEFAULTBUDGETINFO: BudgetInfo = {
-  recurringExpenses: [],
-  accountBalanceHistory: [],
-  incomes: [],
-};
-
-const { set, subscribe, update } = writable(DEFAULTBUDGETINFO);
-
-const get = () => {
-  let val: BudgetInfo;
-  subscribe((v) => (val = v))();
-  return val!;
-};
-
-const updateBudget = (fn: (info: BudgetInfo) => BudgetInfo) => {
-  update((info) => {
-    const newInfo = fn(info);
-    store.set("budgetInfo", newInfo);
-    return newInfo;
-  });
-};
-
-export const budgetStore = {
-  subscribe,
-  addOrUpdateExpense: (expense: Expense) =>
-    updateBudget((info) => {
-      const existing = info.recurringExpenses.find((e) => e.id === expense.id);
-      if (existing) {
-        existing.amount = expense.amount;
-        existing.label = expense.label;
-        existing.recurring = expense.recurring;
-      } else {
-        info.recurringExpenses.push(expense);
-      }
-      return info;
-    }),
-  removeExpense: (id: string) =>
-    updateBudget((info) => {
-      info.recurringExpenses = info.recurringExpenses.filter(
-        (e) => e.id !== id
-      );
-      return info;
-    }),
-
-  addOrUpdateIncome: (income: Income) =>
-    updateBudget((info) => {
-      const existing = info.incomes.find((e) => e.id === income.id);
-      if (existing) {
-        existing.name = income.name;
-        existing.totalIn = income.totalIn;
-        existing.totalRetained = income.totalRetained;
-        existing.dayOfMonth = income.dayOfMonth;
-      } else {
-        info.incomes.push(income);
-      }
-      return info;
-    }),
-  removeIncome: (id: string) =>
-    updateBudget((info) => {
-      info.incomes = info.incomes.filter((e) => e.id !== id);
-      return info;
-    }),
-  clearAll: () => {
-    updateBudget(() => DEFAULTBUDGETINFO);
-  },
-
-  setManualBalance(date: DateTime, balance: number | null) {
-    if (date.isValid) {
-      updateBudget((info) => {
-        const dateStr = date.toISODate()!;
-        const existing = info.accountBalanceHistory.find(
-          (b) => b.date === dateStr
-        );
-        if (existing) {
-          if (balance === null) {
-            info.accountBalanceHistory = info.accountBalanceHistory.filter(
-              (b) => b.date !== dateStr
-            );
-          } else {
-            existing.balance = balance;
-          }
-        } else {
-          if (balance !== null) {
-            info.accountBalanceHistory.push({
-              date: dateStr,
-              balance,
-            });
-          }
-        }
-
-        info.accountBalanceHistory = info.accountBalanceHistory
-          .sort((a, b) => b.date.localeCompare(a.date))
-          .slice(0, 10);
-        return info;
-      });
-    }
-  },
-};
-
-export function generateForecast(timeRange: Interval<true>) {
-  const snapshot = get();
   // sorted by date in descending order
   let sortedBalance = snapshot.accountBalanceHistory.toSorted((a, b) =>
     b.date.localeCompare(a.date)

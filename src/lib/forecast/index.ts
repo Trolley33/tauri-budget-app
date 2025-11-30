@@ -1,9 +1,4 @@
-import type {
-  BudgetInfo,
-  Expense,
-  IBudgetRepository,
-  Income,
-} from "@/budget/types";
+import type { BudgetInfo, Expense, Income } from "@/budget/types";
 import { DateTime, type Interval } from "luxon";
 
 export function generateForecast(
@@ -24,17 +19,21 @@ export function generateForecast(
 
   let balance = firstBalance?.balance || 0;
 
-  const balances: {
+  type BalanceEntry = {
     date: DateTime;
     startingBalance: number;
     closingBalance: number;
-    expenses: ReturnType<typeof getExpenses>;
-    incomes: ReturnType<typeof getIncomes>;
+    expenses: ExpenseEntry[];
+    incomes: IncomeEntry[];
     totalExpenseCost: number;
     type: "manual" | "forecast";
     isPayday: boolean;
-  }[] = [];
+  };
 
+  const balances: BalanceEntry[] = [];
+
+  // Days include all days from the first balance date to the end of the time range
+  // Since we need to incrementally calculate balances even for days outside the range
   const days = timeRange
     .set({
       start: (firstBalance?.date
@@ -46,8 +45,8 @@ export function generateForecast(
     .splitBy({ day: 1 })
     .map((d) => d.start!);
 
-  const expenses = getExpenses(snapshot.recurringExpenses, days);
-  const incomes = getIncomes(snapshot.incomes, days);
+  const expenses = getAllExpensesOnDates(snapshot.recurringExpenses, days);
+  const incomes = getAllIncomesOnDates(snapshot.incomes, days);
 
   for (const day of days) {
     const startingBalance = balance;
@@ -96,70 +95,69 @@ export function generateForecast(
   return balances;
 }
 
-function getExpenses(expenses: Expense[], dates: DateTime<true>[]) {
-  let expensesInScope: {
-    label: string;
-    amount: number;
-    date: DateTime;
-  }[] = [];
+type ExpenseEntry = {
+  label: string;
+  amount: number;
+  date: DateTime;
+};
+/**
+ * Get all expenses that fall on the given dates
+ */
+function getAllExpensesOnDates(expenses: Expense[], dates: DateTime<true>[]) {
+  let expensesInScope: ExpenseEntry[] = [];
   for (const day of dates) {
-    for (const expense of expenses) {
-      if (expense.recurring.type === "monthly") {
-        if (day.day === expense.recurring.dayOfMonth) {
-          expensesInScope.push({
-            label: expense.label,
-            amount: expense.amount,
-            date: day,
-          });
-        }
-      } else if (expense.recurring.type === "weekly") {
-        if (day.weekday === expense.recurring.dayOfWeek) {
-          expensesInScope.push({
-            label: expense.label,
-            amount: expense.amount,
-            date: day,
-          });
-        }
-      } else if (expense.recurring.type === "yearly") {
-        if (
-          day.month === expense.recurring.month &&
-          day.day === expense.recurring.dayOfMonth
-        ) {
-          expensesInScope.push({
-            label: expense.label,
-            amount: expense.amount,
-            date: day,
-          });
-        }
+    const expensesToday = expenses.filter((expense) => {
+      switch (expense.recurring.type) {
+        case "monthly":
+          return day.day === expense.recurring.dayOfMonth;
+        case "weekly":
+          return day.weekday === expense.recurring.dayOfWeek;
+        case "yearly":
+          return (
+            day.month === expense.recurring.month &&
+            day.day === expense.recurring.dayOfMonth
+          );
+        default:
+          return false;
       }
-    }
+    });
+    expensesToday.forEach((expense) => {
+      expensesInScope.push({
+        label: expense.label,
+        amount: expense.amount,
+        date: day,
+      });
+    });
   }
 
   return expensesInScope;
 }
 
-function getIncomes(incomes: Income[], dates: DateTime<true>[]) {
+type IncomeEntry = {
+  name: string;
+  totalIn: number;
+  totalRetained: number;
+  date: DateTime;
+};
+
+/**
+ * Get allincomes that fall on the given dates
+ */
+function getAllIncomesOnDates(incomes: Income[], dates: DateTime<true>[]) {
   if (!incomes) return [];
-  let incomesInScope: {
-    name: string;
-    totalIn: number;
-    totalRetained: number;
-    date: DateTime;
-  }[] = [];
+  let incomesInScope: IncomeEntry[] = [];
   for (const day of dates) {
     for (const income of incomes) {
+      // Either the last day in the month (if less than income.dayOfMonth), or the specified day of the month
       let targetDay =
         day.daysInMonth >= income.dayOfMonth
           ? income.dayOfMonth
           : day.daysInMonth;
+
       // iterate backwards to find the last day of the month that is not a weekend
       let targetDate = day.set({ day: targetDay });
-      while (
-        (targetDate.weekday === 6 || targetDate.weekday === 7) &&
-        targetDate.hasSame(day, "month")
-      ) {
-        targetDate = targetDate.minus({ days: 1 });
-      }
+      targetDate = getClosestWorkingDay(targetDate);
+
       if (day.hasSame(targetDate, "day")) {
         incomesInScope.push({
           name: income.name,
@@ -172,4 +170,15 @@ function getIncomes(incomes: Income[], dates: DateTime<true>[]) {
   }
 
   return incomesInScope;
+}
+
+/**
+ * Given a date, returns the closest previous working day (Mon-Fri)
+ */
+function getClosestWorkingDay(date: DateTime<true>) {
+  let targetDate = date;
+  while (targetDate.weekday === 6 || targetDate.weekday === 7) {
+    targetDate = targetDate.minus({ days: 1 });
+  }
+  return targetDate;
 }

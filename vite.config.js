@@ -29,8 +29,4 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-  // @ts-expect-error process is a nodejs global
-  resolve: process.env.VITEST ? {
-    conditions: ['browser']
-  } : undefined
 }));

@@ -17,7 +17,8 @@
   import type { WeekdayNumbers } from "luxon";
   import { onMount } from "svelte";
   import { v4 } from "uuid";
-  import { budgetStore, type Expense } from "../../store/budget-store";
+  import { storeBudgetRepository } from "@/budget/index.svelte";
+  import type { Expense } from "@/budget/types";
   import { titleStore } from "../../store/title";
 
   onMount(() => {
@@ -31,7 +32,7 @@
 
   $effect(() => {
     if (selectedExpenseId !== null) {
-      draftExpense = $budgetStore.recurringExpenses.find(
+      draftExpense = storeBudgetRepository.budgetInfo.recurringExpenses.find(
         (expense) => expense.id === selectedExpenseId
       ) || {
         id: selectedExpenseId,
@@ -49,7 +50,7 @@
 <div
   class="w-full flex-grow overflow-y-auto pt-4 pb-32 px-4 flex flex-col gap-4 bg-slate-200"
 >
-  {#each $budgetStore.recurringExpenses.toSorted((a, b) => {
+  {#each storeBudgetRepository.budgetInfo.recurringExpenses.toSorted((a, b) => {
     // first weekly, then monthly, then yearly
     if (a.recurring.type === "weekly" && b.recurring.type !== "weekly") {
       return -1;
@@ -196,14 +197,14 @@
             type="button"
             variant="destructive"
             onclick={() => {
-              budgetStore.removeExpense(selectedExpenseId!);
+              storeBudgetRepository.removeExpense(selectedExpenseId!);
               isOpen = false;
             }}>Delete expense</Button
           >
           <Button
             type="submit"
             onclick={() => {
-              budgetStore.addOrUpdateExpense(draftExpense!);
+              storeBudgetRepository.addOrUpdateExpense(draftExpense!);
               isOpen = false;
             }}>Save changes</Button
           >

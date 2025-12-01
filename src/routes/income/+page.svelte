@@ -9,7 +9,8 @@
   import { Icon } from "@steeze-ui/svelte-icon";
   import { onMount } from "svelte";
   import { v4 } from "uuid";
-  import { budgetStore, type Income } from "../../store/budget-store";
+  import { storeBudgetRepository } from "@/budget/index.svelte";
+  import type { Income } from "@/budget/types";
   import { titleStore } from "../../store/title";
 
   onMount(() => {
@@ -23,7 +24,7 @@
 
   $effect(() => {
     if (selectedIncomeId !== null) {
-      draftIncome = $budgetStore.incomes.find(
+      draftIncome = storeBudgetRepository.budgetInfo.incomes.find(
         (income) => income.id === selectedIncomeId
       ) || {
         id: selectedIncomeId,
@@ -39,7 +40,7 @@
 <div
   class="w-full flex-grow overflow-y-auto pt-4 pb-32 px-4 flex flex-col gap-4 bg-slate-200"
 >
-  {#each $budgetStore.incomes as income (income.id)}
+  {#each storeBudgetRepository.budgetInfo.incomes as income (income.id)}
     <Card.Root
       onclick={() => {
         selectedIncomeId = income.id;
@@ -123,14 +124,14 @@
             type="button"
             variant="destructive"
             onclick={() => {
-              budgetStore.removeIncome(selectedIncomeId!);
+              storeBudgetRepository.removeIncome(selectedIncomeId!);
               isOpen = false;
             }}>Delete income</Button
           >
           <Button
             type="submit"
             onclick={() => {
-              budgetStore.addOrUpdateIncome(draftIncome!);
+              storeBudgetRepository.addOrUpdateIncome(draftIncome!);
               isOpen = false;
             }}>Save changes</Button
           >

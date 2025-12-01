@@ -1,7 +1,8 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog";
   import { DateTime, Interval } from "luxon";
-  import { budgetStore, generateForecast } from "../store/budget-store";
+  import { storeBudgetRepository } from "@/budget/index.svelte";
+  import { generateForecast } from "@/forecast";
 
   import { ArrowLeft, ArrowRight } from "@steeze-ui/heroicons";
   import { Icon } from "@steeze-ui/svelte-icon";
@@ -33,8 +34,7 @@
   });
 
   let currentForecast = $derived.by(() => {
-    $budgetStore;
-    return generateForecast(currentRange);
+    return generateForecast(storeBudgetRepository.budgetInfo, currentRange);
   });
 
   function next() {
@@ -120,7 +120,7 @@
                 ),
               })}
             >
-              {day.date.toLocaleString(DateTime.DATEMEDWITHWEEKDAY)}
+              {day.date.toLocaleString(DateTime.DATE_MED_WITH_WEEKDAY)}
             </td>
             <td class="border px-2 py-3 text-right"
               >{formatCurrency(day.startingBalance)}</td
@@ -175,7 +175,7 @@
       <Dialog.Header>
         <Dialog.Title
           >Manually set balance for {selectedDate.toLocaleString(
-            DateTime.DATEMEDWITHWEEKDAY
+            DateTime.DATE_MED_WITH_WEEKDAY
           )}</Dialog.Title
         >
       </Dialog.Header>
@@ -187,7 +187,7 @@
           type="button"
           variant="destructive"
           onclick={() => {
-            budgetStore.setManualBalance(selectedDate!, null);
+            storeBudgetRepository.setManualBalance(selectedDate!, null);
             isManualBalanceDialogOpen = false;
             selectedDate = null;
           }}>Clear</Button
@@ -195,7 +195,10 @@
         <Button
           type="button"
           onclick={() => {
-            budgetStore.setManualBalance(selectedDate!, manualBalance);
+            storeBudgetRepository.setManualBalance(
+              selectedDate!,
+              manualBalance
+            );
             isManualBalanceDialogOpen = false;
             selectedDate = null;
           }}>Save changes</Button
@@ -210,7 +213,9 @@
     {#if selectedDate !== null}
       <Dialog.Header>
         <Dialog.Title>
-          Expenses on {selectedDate.toLocaleString(DateTime.DATEMEDWITHWEEKDAY)}
+          Expenses on {selectedDate.toLocaleString(
+            DateTime.DATE_MED_WITH_WEEKDAY
+          )}
         </Dialog.Title>
         <div class="px-10 pt-5">
           <h2 class="font-semibold">Outgoing</h2>

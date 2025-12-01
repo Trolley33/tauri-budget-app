@@ -1,14 +1,5 @@
-<script module lang="ts">
-  import { setInterval } from "worker-timers";
-  import { browser } from "$app/environment";
-
-  // setInterval(() => {
-  //   // do something every 5 seconds - even if app is minimized
-  // }, 5000);
-</script>
-
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { titleStore } from "../store/title";
   import { Button } from "$lib/components/ui/button";
   import * as Sheet from "$lib/components/ui/sheet";
@@ -25,7 +16,7 @@
 
   import { Bars3 } from "@steeze-ui/heroicons";
   import { Icon } from "@steeze-ui/svelte-icon";
-  import { budgetStore } from "../store/budget-store";
+  import { storeBudgetRepository } from "@/budget/index.svelte";
 </script>
 
 <Sheet.Root bind:open={isOpen}>
@@ -33,19 +24,19 @@
     <div class="flex flex-col pt-8 gap-2 h-full">
       {#each navItems as item}
         <Button
-          variant={$page.url.pathname === item.href ? "default" : "outline"}
+          variant={page.url.pathname === item.href ? "default" : "outline"}
           href={item.href}
           onclick={() => (isOpen = false)}
         >
           {item.label}
         </Button>
       {/each}
-      <div class="flex-grow" />
+      <div class="flex-grow"></div>
       <Button
         variant={"destructive"}
         onclick={() => {
           isOpen = false;
-          budgetStore.clearAll();
+          storeBudgetRepository.clearAll();
         }}
       >
         Clear all data

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { titleStore } from "../store/title";
   import { Button } from "$lib/components/ui/button";
   import * as Sheet from "$lib/components/ui/sheet";
@@ -24,7 +24,7 @@
     <div class="flex flex-col pt-8 gap-2 h-full">
       {#each navItems as item}
         <Button
-          variant={$page.url.pathname === item.href ? "default" : "outline"}
+          variant={page.url.pathname === item.href ? "default" : "outline"}
           href={item.href}
           onclick={() => (isOpen = false)}
         >

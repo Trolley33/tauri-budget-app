@@ -16,9 +16,8 @@ vi.mock("@tauri-apps/plugin-store", () => ({
   }),
 }));
 
-import { StoreBudgetRepository } from "@/budget/store-budget.svelte";
+import { StoreBudgetRepository } from "@/budget/local-budget-store/store-budget.svelte";
 import type { BudgetInfo, Expense } from "@/budget/types";
-import { tick } from "svelte";
 
 describe("StoreBudgetRepository", () => {
   beforeEach(() => {

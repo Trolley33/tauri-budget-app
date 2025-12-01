@@ -1,2 +1,2 @@
-import { StoreBudgetRepository } from "@/budget/store-budget.svelte";
+import { StoreBudgetRepository } from "@/budget/local-budget-store/store-budget.svelte";
 export const storeBudgetRepository = new StoreBudgetRepository();

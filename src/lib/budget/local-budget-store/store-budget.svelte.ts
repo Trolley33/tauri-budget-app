@@ -45,7 +45,14 @@ export class StoreBudgetRepository implements IBudgetRepository {
   private migrateBudgetInfo(oldInfo: Record<string, any>): BudgetInfo {
     return {
       accountBalanceHistory: oldInfo.account_balance_history || [],
-      incomes: oldInfo.incomes || [],
+      incomes:
+        oldInfo.incomes?.map((income: any) => ({
+          id: income.id,
+          name: income.name,
+          totalIn: income.total_in,
+          totalRetained: income.total_retained,
+          dayOfMonth: income.dayOfMonth,
+        })) || [],
       recurringExpenses: oldInfo.recurring_expenses || [],
     };
   }

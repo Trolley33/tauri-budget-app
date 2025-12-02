@@ -27,11 +27,27 @@ export class StoreBudgetRepository implements IBudgetRepository {
   private async initStore() {
     if (!this.persistentStore) {
       this.persistentStore = await load("budget-store.json");
-      const value =
-        (await this.persistentStore.get("budgetInfo")) ??
-        getDefaultBudgetInfo();
+
+      let value = getDefaultBudgetInfo();
+      const oldValue = await this.persistentStore.get("budget_info");
+      if (oldValue) {
+        value = this.migrateBudgetInfo(oldValue as Record<string, any>);
+      } else {
+        const newValue = await this.persistentStore.get("budgetInfo");
+        if (newValue) {
+          value = newValue as BudgetInfo;
+        }
+      }
       Object.assign(this._budgetInfo, value);
     }
+  }
+
+  private migrateBudgetInfo(oldInfo: Record<string, any>): BudgetInfo {
+    return {
+      accountBalanceHistory: oldInfo.account_balance_history || [],
+      incomes: oldInfo.incomes || [],
+      recurringExpenses: oldInfo.recurring_expenses || [],
+    };
   }
 
   private updateBudgetInfo(fn: (info: BudgetInfo) => BudgetInfo) {
